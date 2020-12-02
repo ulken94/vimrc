@@ -1,0 +1,3 @@
+[submodule "sources_forked/rainbow"]
+	path = sources_forked/rainbow
+	url = https://github.com/frazrepo/vim-rainbow.git
