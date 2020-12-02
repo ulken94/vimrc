@@ -12,6 +12,8 @@ if v:version < 703 || (v:version == 703 && !has("patch105"))
   finish
 endif
 
+let s:nomodeline = (v:version > 703 || (v:version == 703 && has('patch442'))) ? '<nomodeline>' : ''
+
 function! s:set(var, default) abort
   if !exists(a:var)
     if type(a:default)
@@ -62,7 +64,7 @@ else
   call s:set('g:gitgutter_sign_removed_first_line', '_^')
 endif
 
-call s:set('g:gitgutter_sign_removed_above_and_below', '[')
+call s:set('g:gitgutter_sign_removed_above_and_below', '_¯')
 call s:set('g:gitgutter_sign_modified_removed',       '~_')
 call s:set('g:gitgutter_git_args',                      '')
 call s:set('g:gitgutter_diff_relative_to',         'index')
@@ -73,6 +75,8 @@ call s:set('g:gitgutter_terminal_reports_focus',         1)
 call s:set('g:gitgutter_async',                          1)
 call s:set('g:gitgutter_log',                            0)
 call s:set('g:gitgutter_use_location_list',              0)
+call s:set('g:gitgutter_close_preview_on_escape',        0)
+call s:set('g:gitgutter_show_msg_on_hunk_jumping',       1)
 
 call s:set('g:gitgutter_git_executable', 'git')
 if !executable(g:gitgutter_git_executable)
@@ -225,12 +229,31 @@ nnoremap <silent> <Plug>GitGutterPreviewHunk   :call gitgutter#utility#warn('ple
 function! s:on_bufenter()
   call gitgutter#setup_maps()
 
+  " To keep vim's start-up fast, do not process the buffer when vim is starting.
+  " Instead process it a short time later.  Normally we would rely on our
+  " CursorHold autocommand to handle this but it turns out CursorHold is not
+  " guaranteed to fire if the user has not typed anything yet; so set up a
+  " timer instead.  The disadvantage is that if CursorHold does fire, the
+  " plugin will do a round of unnecessary work; but since there will not have
+  " been any changes to the buffer since the first round, the second round
+  " will be cheap.
+  if has('vim_starting') && !$VIM_GITGUTTER_TEST
+    if exists('*timer_start')
+      call timer_start(&updatetime, 'GitGutterCursorHold')
+    endif
+    return
+  endif
+
   if exists('t:gitgutter_didtabenter') && t:gitgutter_didtabenter
     let t:gitgutter_didtabenter = 0
     call gitgutter#all(!g:gitgutter_terminal_reports_focus)
   else
     call gitgutter#process_buffer(bufnr(''), !g:gitgutter_terminal_reports_focus)
   endif
+endfunction
+
+function! GitGutterCursorHold(timer)
+  execute 'doautocmd' s:nomodeline 'gitgutter CursorHold'
 endfunction
 
 " Autocommands {{{
@@ -241,6 +264,11 @@ augroup gitgutter
   autocmd TabEnter * let t:gitgutter_didtabenter = 1
 
   autocmd BufEnter * call s:on_bufenter()
+
+  " Ensure Vim is always checking for CursorMoved to avoid CursorMoved
+  " being fired at the wrong time in floating preview window on Neovim.
+  " See vim/vim#2053.
+  autocmd CursorMoved * execute ''
 
   autocmd CursorHold,CursorHoldI * call gitgutter#process_buffer(bufnr(''), 0)
   if exists('*timer_start') && has('lambda')
@@ -266,7 +294,7 @@ augroup gitgutter
   " FocusGained gets triggered on startup with Neovim at least already.
   " Therefore this tracks also if it was lost before.
   let s:focus_was_lost = 0
-  autocmd FocusGained * if s:focus_was_lost | let focus_was_lost = 0 | call gitgutter#all(1) | endif
+  autocmd FocusGained * if s:focus_was_lost | let s:focus_was_lost = 0 | call gitgutter#all(1) | endif
   autocmd FocusLost * let s:focus_was_lost = 1
 
   if exists('##VimResume')
