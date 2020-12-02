@@ -1,3 +1,6 @@
 [submodule "sources_forked/rainbow"]
 	path = sources_forked/rainbow
 	url = https://github.com/frazrepo/vim-rainbow.git
+[submodule "sources_forked/jedi-vim"]
+	path = sources_forked/jedi-vim
+	url = https://github.com/davidhalter/jedi-vim.git
