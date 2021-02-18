@@ -40,3 +40,6 @@ let g:rainbow_load_separately = [
 let g:rainbow_guifgs = ['RoyalBlue3', 'DarkOrange3', 'DarkOrchid3', 'FireBrick']
 let g:rainbow_ctermfgs = ['lightblue', 'lightgreen', 'yellow', 'red', 'magenta']
 
+let @m='i"""Module Description.- Author: Haneol Kim- Contact: hekim@jmarple.aiýa'
+let @d='iimport pdb; pdb.set_trace()ýa'
+
